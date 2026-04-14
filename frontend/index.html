@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KLS Timber Studio - Kerto-Ripa Calculator</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="page-shell">
+        <header class="hero">
+            <div class="hero-copy">
+                <p class="eyebrow">KLS Timber Studio</p>
+                <h1>Calculadora de forjado de madera</h1>
+                <p class="hero-text">
+                    Introduce geometría, material y cargas. La interfaz envía los datos al backend y presenta
+                    resultados trazables de flexión, cortante y flecha.
+                </p>
+            </div>
+            <div class="hero-card">
+                <span class="hero-card-label">Comprobación gobernante</span>
+                <strong id="governing-check">Sin cálculo</strong>
+                <span id="status-pill" class="status-pill idle">Pendiente</span>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="geometry">
+                <span class="tab-icon">📐</span>
+                Sección Transversal
+            </button>
+            <button class="tab-button" data-tab="loads">
+                <span class="tab-icon">⚖️</span>
+                Cargas
+            </button>
+            <button class="tab-button" data-tab="designBasis">
+                <span class="tab-icon">≡</span>
+                Bases de cálculo
+            </button>
+            <button class="tab-button" data-tab="results">
+                <span class="tab-icon">📊</span>
+                Resultados
+            </button>
+        </div>
+
+        <div class="layout layout-split-preview">
+            <section class="panel panel-form panel-form-split">
+                <!-- TAB: GEOMETRY -->
+                <div id="tab-geometry" class="tab-content">
+                    <form id="geometry-form" class="calc-form">
+                        <div class="form-group form-group-compact-top">
+                            <h3 class="group-title">Geometría longitudinal</h3>
+                            <div class="field-grid">
+                                <div class="field">
+                                    <label for="L_ef_mm">Luz Efectiva (mm)</label>
+                                    <input type="number" id="L_ef_mm" value="5500" min="1">
+                                </div>
+                                <div class="field">
+                                    <label for="element_width_mm">Ancho total panel (mm)</label>
+                                    <input type="number" id="element_width_mm" value="585" min="1">
+                                </div>
+                                <div class="field">
+                                    <label for="n_ribs">Nº de nervios</label>
+                                    <input type="number" id="n_ribs" value="2" min="1">
+                                </div>
+                                <div class="field">
+                                    <label for="b_w_mm">Base nervio (mm)</label>
+                                    <input type="number" id="b_w_mm" value="45" min="1">
+                                </div>
+                                <div class="field">
+                                    <label for="h_w_mm">Canto nervio (mm)</label>
+                                    <input type="number" id="h_w_mm" value="225" min="1">
+                                </div>
+                                <div class="field">
+                                    <label for="h_f1_mm">Losa superior hf1 (mm)</label>
+                                    <input type="number" id="h_f1_mm" value="25" min="1">
+                                </div>
+                                <div class="field">
+                                    <label for="h_f2_mm">Losa inferior hf2 (mm)</label>
+                                    <input type="number" id="h_f2_mm" value="25" min="1">
+                                </div>
+                                <div class="field">
+                                    <label for="rib_spacing">Separación entre nervios (mm)</label>
+                                    <input type="number" id="rib_spacing" value="585" min="1">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="group-title support-group-title">
+                                <div>
+                                    <h3>Apoyos</h3>
+                                    <p>La coordenada se mide de izquierda a derecha y no puede superar la luz.</p>
+                                </div>
+                                <button type="button" class="secondary-button" id="add-support-btn">Añadir apoyo</button>
+                            </div>
+                            <div id="supports-list" class="supports-list">
+                                <!-- Supports will be added dynamically -->
+                            </div>
+                        </div>
+
+                        <article class="diagram-card beam-view-card">
+                            <div class="diagram-card-header">
+                                <h3>Vista longitudinal</h3>
+                                <span id="supports-count">2 apoyos</span>
+                            </div>
+                            <svg id="beam-svg" class="beam-svg" viewBox="0 0 600 120"></svg>
+                            <div class="diagram-card-footer">
+                                <span>Luz: <span id="beam-span-display">5.50</span> m</span>
+                                <span>Ancho: <span id="beam-width-display">585</span> mm</span>
+                            </div>
+                        </article>
+
+                        <article class="diagram-card section-view-card">
+                            <div class="diagram-card-header">
+                                <h3>Sección transversal (Box Slab)</h3>
+                            </div>
+                            <svg id="section-svg" class="section-svg" viewBox="0 0 400 200"></svg>
+                            <div class="diagram-card-footer">
+                                <span>h<sub>f1</sub>: <span id="h_f1_display">25</span> mm</span>
+                                <span>h<sub>w</sub>: <span id="h_w_display">225</span> mm</span>
+                                <span>h<sub>f2</sub>: <span id="h_f2_display">25</span> mm</span>
+                                <span>b<sub>w</sub>: <span id="b_w_display">45</span> mm</span>
+                                <span>Separación: <span id="rib_spacing_display">585</span> mm</span>
+                            </div>
+                        </article>
+                    </form>
+                </div>
+
+                <!-- TAB: LOADS -->
+                <div id="tab-loads" class="tab-content" style="display: none;">
+                    <div class="form-group">
+                        <div class="group-title loads-group-title">
+                            <div>
+                                <h3>Acciones del proyecto</h3>
+                                <p>Define el catálogo de cargas y revisa cómo se formarían las combinaciones.</p>
+                            </div>
+                            <div class="action-toolbar">
+                                <button type="button" class="secondary-button" data-action-type="permanent">+ Permanente</button>
+                                <button type="button" class="secondary-button" data-action-type="imposed">+ Uso</button>
+                                <button type="button" class="secondary-button" data-action-type="snow">+ Nieve</button>
+                                <button type="button" class="secondary-button" data-action-type="wind">+ Viento</button>
+                            </div>
+                        </div>
+
+                        <div class="loads-workspace">
+                            <div id="actions-list" class="actions-list">
+                                <!-- Actions will be added dynamically -->
+                            </div>
+
+                            <div id="action-editor" class="action-editor">
+                                <div class="empty-state compact">
+                                    <h3>Sin acciones</h3>
+                                    <p>Añade una acción para empezar a construir el catálogo de cargas.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="group-title">
+                            <h3>Vista previa de combinaciones</h3>
+                        </div>
+                        <div id="combination-preview-list" class="combination-preview-list">
+                            <!-- Combinations will be added dynamically -->
+                        </div>
+                    </div>
+
+                    <div id="form-errors" class="message error" style="display: none;"></div>
+                    <div id="request-error" class="message error" style="display: none;"></div>
+
+                    <button type="button" id="calculate-btn" class="submit-button">Calcular forjado</button>
+                </div>
+
+                <!-- TAB: DESIGN BASIS -->
+                <div id="tab-designBasis" class="tab-content" style="display: none;">
+                    <form id="design-form" class="calc-form">
+                        <div class="form-group">
+                            <h3 class="group-title">Bases generales</h3>
+                            <div class="field-grid">
+                                <div class="field">
+                                    <label for="service_class">Clase de servicio</label>
+                                    <select id="service_class">
+                                        <option value="SC1">SC1 (Condiciones secas)</option>
+                                        <option value="SC2">SC2 (Humedad media)</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="load_duration">Duración de la carga</label>
+                                    <select id="load_duration">
+                                        <option value="permanent">Permanente</option>
+                                        <option value="long">Larga (>6 meses)</option>
+                                        <option value="medium" selected>Media (1 semana-6 meses)</option>
+                                        <option value="short">Corta (<1 semana)</option>
+                                        <option value="instantaneous">Instantánea</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <h3 class="group-title">Flecha SLS characteristic</h3>
+                            <div class="field-grid">
+                                <div class="field">
+                                    <label for="active_ratio">Activa L/x</label>
+                                    <input type="number" id="active_ratio" value="300" min="1">
+                                </div>
+                                <div class="field">
+                                    <label for="instantaneous_ratio">Instantánea L/x</label>
+                                    <input type="number" id="instantaneous_ratio" value="300" min="1">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <h3 class="group-title">Flecha SLS quasi-permanent</h3>
+                            <div class="field-grid">
+                                <div class="field">
+                                    <label for="final_ratio">Final L/x</label>
+                                    <input type="number" id="final_ratio" value="200" min="1">
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- TAB: RESULTS -->
+                <div id="tab-results" class="tab-content" style="display: none;">
+                    <div id="results-placeholder" class="empty-state">
+                        <h3>Sin resultados</h3>
+                        <p>Introduce los datos y pulsa "Calcular forjado" para ver los resultados.</p>
+                    </div>
+                    <div id="results-content" style="display: none;">
+                        <div id="summary-band" class="summary-band">
+                            <div>
+                                <span class="metric-label">Estado</span>
+                                <strong id="result-status">-</strong>
+                            </div>
+                            <div>
+                                <span class="metric-label">Verificación gobernante</span>
+                                <strong id="result-governing">-</strong>
+                            </div>
+                            <div>
+                                <span class="metric-label">Norma</span>
+                                <strong>EN 1995-1-1 / Kerto</strong>
+                            </div>
+                        </div>
+
+                        <div id="intermediate-values-section" class="form-group" style="display: none;">
+                            <div class="group-title"><h3>Valores intermedios</h3></div>
+                            <div id="metrics-grid" class="metrics-grid"></div>
+                        </div>
+
+                        <div id="uls-checks-section" class="form-group" style="display: none;">
+                            <h3 style="margin: 12px 0 8px; font-size: 0.85rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.05em;">Verificaciones ULS</h3>
+                            <div id="uls-checks-list" class="checks-list"></div>
+                        </div>
+
+                        <div id="sls-checks-section" class="form-group" style="display: none;">
+                            <h3 style="margin: 16px 0 8px; font-size: 0.85rem; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.05em;">Verificaciones SLS</h3>
+                            <div id="sls-checks-list" class="checks-list"></div>
+                        </div>
+
+                        <div id="warnings-section" class="warnings-box" style="display: none;">
+                            <h3>Advertencias</h3>
+                            <div id="warnings-list"></div>
+                        </div>
+
+                        <div id="diagrams-section" class="form-group" style="display: none;">
+                            <h3 class="group-title">Diagramas</h3>
+                            <div class="diagram-grid">
+                                <div class="diagram-card">
+                                    <div class="diagram-card-header">
+                                        <h4>Momento flector (kNm)</h4>
+                                    </div>
+                                    <canvas id="moment-chart"></canvas>
+                                </div>
+                                <div class="diagram-card">
+                                    <div class="diagram-card-header">
+                                        <h4>Cortante (kN)</h4>
+                                    </div>
+                                    <canvas id="shear-chart"></canvas>
+                                </div>
+                                <div class="diagram-card">
+                                    <div class="diagram-card-header">
+                                        <h4>Flecha (mm)</h4>
+                                    </div>
+                                    <canvas id="deflection-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
